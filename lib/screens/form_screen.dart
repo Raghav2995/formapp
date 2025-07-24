@@ -1,61 +1,75 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/form_model.dart';
-import '../providers/form_provider.dart';
+import '../services/firestore_service.dart';
 
 class FormScreen extends StatefulWidget {
-  final FormModel? form;
-  const FormScreen({super.key, this.form});
+  final String? formId;
+  final Map<String, dynamic>? initialData;
+
+  const FormScreen({super.key, this.formId, this.initialData});
 
   @override
   State<FormScreen> createState() => _FormScreenState();
 }
 
 class _FormScreenState extends State<FormScreen> {
+  final FirestoreService _firestoreService = FirestoreService(); // ✅ moved here
+
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController firstNameController;
-  late TextEditingController middleNameController;
-  late TextEditingController lastNameController;
-  late TextEditingController phoneController;
-  late TextEditingController addressController;
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    firstNameController = TextEditingController(text: widget.form?.firstName ?? '');
-    middleNameController = TextEditingController(text: widget.form?.middleName ?? '');
-    lastNameController = TextEditingController(text: widget.form?.lastName ?? '');
-    phoneController = TextEditingController(text: widget.form?.phone ?? '');
-    addressController = TextEditingController(text: widget.form?.address ?? '');
+    if (widget.initialData != null) {
+      _firstNameController.text = widget.initialData!['firstName'] ?? '';
+      _lastNameController.text = widget.initialData!['lastName'] ?? '';
+      _emailController.text = widget.initialData!['email'] ?? '';
+      _phoneController.text = widget.initialData!['phone'] ?? '';
+    }
   }
 
   @override
   void dispose() {
-    firstNameController.dispose();
-    middleNameController.dispose();
-    lastNameController.dispose();
-    phoneController.dispose();
-    addressController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
-  void saveForm() {
+  void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      final formProvider = Provider.of<FormProvider>(context, listen: false);
-      final form = FormModel(
-        id: widget.form?.id,
-        firstName: firstNameController.text,
-        middleName: middleNameController.text,
-        lastName: lastNameController.text,
-        phone: phoneController.text,
-        address: addressController.text,
-      );
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      final phone = _phoneController.text.trim();
+      final email = _emailController.text.trim();
+      final middleName = ''; // optional
+      final address = '';    // optional
 
-      if (widget.form == null) {
-        formProvider.addForm(form);
+      if (widget.formId == null) {
+        _firestoreService.addForm(
+          firstName: firstName,
+          lastName: lastName,
+          middleName: middleName,
+          phone: phone,
+          email: email,
+          address: address,
+        );
       } else {
-        formProvider.updateForm(form);
+        _firestoreService.updateForm(
+          formId: widget.formId!,
+          firstName: firstName,
+          lastName: lastName,
+          middleName: middleName,
+          phone: phone,
+          email: email,
+          address: address,
+        );
       }
+
       Navigator.pop(context);
     }
   }
@@ -63,7 +77,9 @@ class _FormScreenState extends State<FormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.form == null ? 'Add Form' : 'Edit Form')),
+      appBar: AppBar(
+        title: Text(widget.formId == null ? 'New Form' : 'Edit Form'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -71,32 +87,28 @@ class _FormScreenState extends State<FormScreen> {
           child: ListView(
             children: [
               TextFormField(
-                controller: firstNameController,
+                controller: _firstNameController,
                 decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) => value!.isEmpty ? 'Enter first name' : null,
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
-                controller: middleNameController,
-                decoration: const InputDecoration(labelText: 'Middle Name'),
-              ),
-              TextFormField(
-                controller: lastNameController,
+                controller: _lastNameController,
                 decoration: const InputDecoration(labelText: 'Last Name'),
-                validator: (value) => value!.isEmpty ? 'Enter last name' : null,
               ),
               TextFormField(
-                controller: phoneController,
-                decoration: const InputDecoration(labelText: 'Phone Number'),
-                validator: (value) => value!.isEmpty ? 'Enter phone number' : null,
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
               ),
               TextFormField(
-                controller: addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
-                validator: (value) => value!.isEmpty ? 'Enter address' : null,
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Phone'),
+                keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: saveForm,
+                onPressed: _submitForm,
                 child: const Text('Submit'),
               ),
             ],

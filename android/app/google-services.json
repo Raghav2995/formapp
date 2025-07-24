@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "50847934766",
+    "project_id": "form-app-cloud",
+    "storage_bucket": "form-app-cloud.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:50847934766:android:e287d4a5fbea3288a7f2bf",
+        "android_client_info": {
+          "package_name": "com.example.formapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "50847934766-fm8mdubpm53tpcg0cmi4cjabit0q2sp8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.formapp",
+            "certificate_hash": "c1c39398f92ffb3a353376f83109580c9e7008c1"
+          }
+        },
+        {
+          "client_id": "50847934766-rgm5nf317i57i574q0crcdc4hqhba8h6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCByfZmdFKMTZ_Gx_AX_r2jdzhCsq78KB4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "50847934766-rgm5nf317i57i574q0crcdc4hqhba8h6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "50847934766-34gmt4ttkak2n44nb8oj1qc1rclaaepc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.formapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
