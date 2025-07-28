@@ -37,8 +37,8 @@ dependencies:
   firebase_auth: ^4.17.0
   google_sign_in: ^6.2.1
   cloud_firestore: ^4.17.3
-  
-
+  lottie: ^2.7.0
+  rive: ^0.12.4
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -95,3 +95,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  assets:
+   # - assets/welcome_animation.json
+    - assets/images/google_icon.png

@@ -1,7 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
-  final CollectionReference forms = FirebaseFirestore.instance.collection('forms');
+  final CollectionReference forms =
+      FirebaseFirestore.instance.collection('forms');
+
+  // used internally for one-time fetches
+  final CollectionReference _formCollection =
+      FirebaseFirestore.instance.collection('forms');
 
   Future<void> addForm({
     required String firstName,
@@ -48,10 +53,16 @@ class FirestoreService {
   Stream<QuerySnapshot> getFormsStream() {
     return forms.orderBy('timestamp', descending: true).snapshots();
   }
-}
-Future<void> wipeAllForms() async {
-  final snapshot = await _formCollection.get();
-  for (var doc in snapshot.docs) {
-    await doc.reference.delete();
+
+  Future<List<QueryDocumentSnapshot>> getFormsOnce() async {
+    final snapshot = await _formCollection.get();
+    return snapshot.docs;
+  }
+
+  Future<void> wipeAllForms() async {
+    final snapshot = await _formCollection.get();
+    for (var doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
   }
 }

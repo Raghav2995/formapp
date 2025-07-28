@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import 'form_screen.dart';
 import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -203,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final forms = await FirestoreService().getFormsOnce();
-              for (var doc in forms.docs) {
+              for (var doc in forms) {
                 await FirestoreService().deleteForm(doc.id);
               }
             },
