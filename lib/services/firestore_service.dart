@@ -49,3 +49,9 @@ class FirestoreService {
     return forms.orderBy('timestamp', descending: true).snapshots();
   }
 }
+Future<void> wipeAllForms() async {
+  final snapshot = await _formCollection.get();
+  for (var doc in snapshot.docs) {
+    await doc.reference.delete();
+  }
+}
