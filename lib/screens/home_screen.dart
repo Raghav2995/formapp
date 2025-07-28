@@ -5,7 +5,6 @@ import 'form_screen.dart';
 import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,6 +16,22 @@ class _HomeScreenState extends State<HomeScreen> {
   final auth = AuthService();
   bool syncOn = true;
   DateTime? lastSync;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (syncOn) _autoSync();
+  }
+
+  void _autoSync() async {
+    setState(() => isLoading = true);
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() {
+      lastSync = DateTime.now();
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onChanged: (value) {
                         setState(() {
                           syncOn = value;
-                          lastSync = DateTime.now();
+                          if (syncOn) _autoSync();
                         });
                       },
                     ),
@@ -86,65 +101,74 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _buildDashboard(),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: CircularProgressIndicator(),
+            ),
           Expanded(
             child: syncOn
                 ? StreamBuilder<QuerySnapshot>(
-                    stream: FirestoreService().getFormsStream(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return const Center(child: Text('Something went wrong'));
-                      }
+              stream: FirestoreService().getFormsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Something went wrong'));
+                }
 
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                      final forms = snapshot.data!.docs;
-                      lastSync = DateTime.now(); // update last sync time
+                final forms = snapshot.data!.docs;
+                lastSync = DateTime.now();
 
-                      if (forms.isEmpty) {
-                        return const Center(child: Text('No forms found.'));
-                      }
+                if (forms.isEmpty) {
+                  return const Center(child: Text('No forms found.'));
+                }
 
-                      return ListView.builder(
-                        itemCount: forms.length,
-                        itemBuilder: (context, index) {
-                          final form = forms[index];
-                          final data = form.data() as Map<String, dynamic>;
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: ListView.builder(
+                    key: ValueKey(forms.length),
+                    itemCount: forms.length,
+                    itemBuilder: (context, index) {
+                      final form = forms[index];
+                      final data = form.data() as Map<String, dynamic>;
 
-                          return ListTile(
-                            title: Text(data['firstName'] ?? 'No name'),
-                            subtitle: Text(data['phone'] ?? ''),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => FormScreen(
-                                          formId: form.id,
-                                          initialData: data,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    FirestoreService().deleteForm(form.id);
-                                  },
-                                ),
-                              ],
+                      return ListTile(
+                        title: Text(data['firstName'] ?? 'No name'),
+                        subtitle: Text(data['phone'] ?? ''),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FormScreen(
+                                      formId: form.id,
+                                      initialData: data,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () {
+                                FirestoreService().deleteForm(form.id);
+                              },
+                            ),
+                          ],
+                        ),
                       );
                     },
-                  )
+                  ),
+                );
+              },
+            )
                 : const Center(child: Text('Sync is turned off')),
           ),
         ],
