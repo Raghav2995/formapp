@@ -13,202 +13,208 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final auth = AuthService();
-  final ValueNotifier<bool> isSyncOn = ValueNotifier<bool>(true);
-
-  void _showProfileMenu(BuildContext context, Offset offset, String? email) async {
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    await showMenu(
-      context: context,
-      position: RelativeRect.fromRect(
-        Rect.fromPoints(offset, offset),
-        Offset.zero & overlay.size,
-      ),
-      items: [
-        PopupMenuItem(
-          enabled: false,
-          child: Row(
-            children: [
-              const Icon(Icons.email, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  email ?? "No email",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          child: ValueListenableBuilder<bool>(
-            valueListenable: isSyncOn,
-            builder: (context, value, _) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Sync"),
-                  Switch(
-                    value: value,
-                    onChanged: (val) => isSyncOn.value = val,
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        PopupMenuItem(
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.settings),
-            title: const Text("Settings"),
-            onTap: () {
-              Navigator.pop(context);
-              // implement settings page if needed
-            },
-          ),
-        ),
-        PopupMenuItem(
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.delete_forever),
-            title: const Text("Wipe all notes"),
-            onTap: () {
-              Navigator.pop(context);
-              _confirmWipeNotes();
-            },
-          ),
-        ),
-        PopupMenuItem(
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.logout),
-            title: const Text("Logout"),
-            onTap: () {
-              Navigator.pop(context);
-              auth.signOut();
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _confirmWipeNotes() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Wipe all notes?"),
-        content: const Text("This action cannot be undone."),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.pop(context),
-          ),
-          TextButton(
-            child: const Text("Delete All", style: TextStyle(color: Colors.red)),
-            onPressed: () async {
-              Navigator.pop(context);
-              await FirestoreService().wipeAllForms();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("All notes deleted.")),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  bool syncOn = true;
+  DateTime? lastSync;
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = auth.currentUser;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Forms'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTapDown: (TapDownDetails details) {
-                _showProfileMenu(context, details.globalPosition, currentUser?.email);
-              },
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundImage: AssetImage('assets/profile_placeholder.png'), // add your own logo here
+          PopupMenuButton<String>(
+            icon: const CircleAvatar(child: Icon(Icons.person)),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'email',
+                child: Row(
+                  children: const [
+                    Icon(Icons.email, size: 20),
+                    SizedBox(width: 8),
+                    Text('Logged in as'),
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirestoreService().getFormsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final forms = snapshot.data!.docs;
-
-          if (forms.isEmpty) {
-            return const Center(child: Text('No forms found.'));
-          }
-
-          return ListView.builder(
-            itemCount: forms.length,
-            itemBuilder: (context, index) {
-              final form = forms[index];
-              final data = form.data() as Map<String, dynamic>;
-
-              return ListTile(
-                title: Text(data['firstName'] ?? 'No name'),
-                subtitle: Text(data['phone'] ?? ''),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+              PopupMenuItem(
+                enabled: false,
+                child: Text(FirebaseAuth.instance.currentUser?.email ?? 'No Email'),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'settings',
+                child: const Text('Settings'),
+              ),
+              PopupMenuItem(
+                value: 'toggle_sync',
+                child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => FormScreen(
-                              formId: form.id,
-                              initialData: data,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        FirestoreService().deleteForm(form.id);
+                    const Text('Sync'),
+                    const Spacer(),
+                    Switch(
+                      value: syncOn,
+                      onChanged: (value) {
+                        setState(() {
+                          syncOn = value;
+                          lastSync = DateTime.now();
+                        });
                       },
                     ),
                   ],
                 ),
-              );
+              ),
+              PopupMenuItem(
+                value: 'wipe',
+                child: const Text('Wipe All Notes'),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: const Text('Logout'),
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'logout') {
+                auth.signOut();
+              } else if (value == 'wipe') {
+                _confirmWipeDialog();
+              }
             },
-          );
-        },
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
+      body: Column(
+        children: [
+          _buildDashboard(),
+          Expanded(
+            child: syncOn
+                ? StreamBuilder<QuerySnapshot>(
+                    stream: FirestoreService().getFormsStream(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return const Center(child: Text('Something went wrong'));
+                      }
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final forms = snapshot.data!.docs;
+                      lastSync = DateTime.now(); // update last sync time
+
+                      if (forms.isEmpty) {
+                        return const Center(child: Text('No forms found.'));
+                      }
+
+                      return ListView.builder(
+                        itemCount: forms.length,
+                        itemBuilder: (context, index) {
+                          final form = forms[index];
+                          final data = form.data() as Map<String, dynamic>;
+
+                          return ListTile(
+                            title: Text(data['firstName'] ?? 'No name'),
+                            subtitle: Text(data['phone'] ?? ''),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => FormScreen(
+                                          formId: form.id,
+                                          initialData: data,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () {
+                                    FirestoreService().deleteForm(form.id);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  )
+                : const Center(child: Text('Sync is turned off')),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const FormScreen()),
           );
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Form'),
       ),
     );
+  }
+
+  Widget _buildDashboard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      color: Theme.of(context).colorScheme.secondaryContainer,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Dashboard',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.sync, size: 20),
+              const SizedBox(width: 8),
+              Text(syncOn ? 'Sync is ON' : 'Sync is OFF'),
+              const Spacer(),
+              Text(
+                lastSync != null ? 'Last sync: ${_formatTime(lastSync!)}' : 'Not synced yet',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmWipeDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm Wipe'),
+        content: const Text('Are you sure you want to delete all forms? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final forms = await FirestoreService().getFormsOnce();
+              for (var doc in forms.docs) {
+                await FirestoreService().deleteForm(doc.id);
+              }
+            },
+            child: const Text('Wipe All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(DateTime time) {
+    return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
   }
 }
