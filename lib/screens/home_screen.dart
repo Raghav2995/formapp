@@ -58,10 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const PopupMenuDivider(),
               PopupMenuItem(
-                value: 'settings',
-                child: const Text('Settings'),
-              ),
-              PopupMenuItem(
                 value: 'toggle_sync',
                 child: Row(
                   children: [
@@ -219,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Confirm Wipe'),
-        content: const Text('Are you sure you want to delete all forms? This cannot be undone.'),
+        content: const Text('Are you sure you want to delete all forms? This will wipe all form data stored locally AND on the cloud. This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
